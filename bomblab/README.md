@@ -61,7 +61,7 @@
 
 ![image-20190804231045780](https://github.com/shendezhuti/README_ADD_PIC/blob/master/CMU15213/bomlab/image-20190804231045780.png)
 
-于是我们输入<font color=red> `disas phase_2`</font> 回到函数phase_2
+于是我们输入<font color=red> `disas phase_2`</font> 回到函数phase_2 实际上函数使用了栈(rsp)存放返回的结果。
 
 ![image-20190804231233979](https://github.com/shendezhuti/README_ADD_PIC/blob/master/CMU15213/bomlab/image-20190804231233979.png)
 
@@ -70,4 +70,33 @@
 因此答案是<font color=red> `1 2 4 8 16 32`</font> 
 
 ------
+
+## 2019/08/05
+
+###  三.phase_3
+
+`disas phase_3`不必多说，继续看反汇编码。
+
+![image-20190805014806518](https://github.com/shendezhuti/README_ADD_PIC/blob/master/CMU15213/bomlab/image-20190805014912674.png)
+
+<+4>以及<+9>两行将`rsp+0xc`与`rsp+0x8`的值分别给`rcx`与`rdx`，下一行将一个地址值复制给了`esi`，接着将`eax`置为0，下一步调用了库函数`sscanf`，我们想到`sscanf`中的参数中需要一个格式化字符串，那么`esi`中的这个地址值就很有可能存放了这个字符串，我们同样使用`gdb`在运行时查看这个字符串：
+
+![img](https://github.com/shendezhuti/README_ADD_PIC/blob/master/CMU15213/bomlab/image-20190805015706461.png)
+
+可以看到这就是格式化字符串，读入的是两个整型值。这两个值存放在哪里呢？我们想到之前把`rsp+0xc`与`rsp+0x8`的值分别给`rcx`与`rdx`，这是两个地址值，我们可以用之前的方法验证栈中存放的确实是我们读入的这两个值。
+
+下面第<+29>行将`eax`与1进行比较，`eax`一般用于存放函数返回值，而`sscanf` 的返回值是成功读入的数值个数，也就是说这几行将成功读入的个数与1进行比较，如果大于1则跳过引爆的代码。
+
+下面第<+39>行将`rsp+0x8`中存放的值与`0x7`进行比较，如果大于`0x7`则跳到`<+106>`的位置，引爆炸弹。
+
+下面的两行比较关键：第<+46>行将`rsp+0x8`中存放的值复制入`eax`，第<+50>行进行一个跳转，跳转到的地址为`0x402470(,%rax,8)`，这就是一个典型的`switch`语句的实现：直接跳转到索引*位移的指令位置。
+
+![image-20190805015407101](https://github.com/shendezhuti/README_ADD_PIC/blob/master/CMU15213/bomlab/image-20190805015407101.png)
+
+上面的代码已经加了注释，假设读入的第一个数为x，看到所有分支最后都跳转到了`phase_3+123`这行判断中，将`eax`中的值与`rsp+0xc`也就是我们读入的第二个数进行判断，如果相等的话跳过引爆代码。
+
+而每个分支都将一个数复制到了`eax`中，也就是说我们只要根据不同的第一个参数的值读入对应的第二个参数就可以了，所以我们可以随意选择一个x值，这里我选择`x=1`，对应的第二个参数为`0x137`换成十进制是311，所以第3阶段的（一个）答案为：`1 311`
+
+
+
 
