@@ -167,18 +167,23 @@
 复制
 
 ```c
-int fun(int a1, int a2, int x){
-    int b = (a1 - a2) >> 31;
-    int result = ((a1-a2) + b) >> 1;
-    b = result + a2;
-    if(b == x) return 0;
-    if(b < x) {
-        result = fun(a1, b + 1, x);
-        return result * 2 + 1;
-    }else{
-        result = fun(b - 1, a2, x);
-        return result * 2;
+int func4(int target, int step, int limit) {
+  /* edi = target; esi = step; edx = limit */
+  int temp = (limit - step) * 0.5;
+  int mid = temp + step;
+  if (mid > target) {
+    limit = mid - 1;
+    int ret1 = func4(target, step, limit);
+    return 2 * ret1;
+  } else {
+    if (mid >= target) {
+      return 0;
+    } else {
+      step = mid + 1;
+      int ret2 = func4(target, step, limit);
+      return (2 * ret2 + 1);
     }
+  }
 }
 
 ```
