@@ -103,7 +103,30 @@
 
 到这一步的拆弹真的看的头大了，感觉自己的基础知识打的不是特别稳。
 
-![image-20190805113853994](https://github.com/shendezhuti/README_ADD_PIC/blob/master/CMU15213/bomlab/image-20190805113853994.png)
+```assembly
+  0x000000000040100c <+0>:	sub    $0x18,%rsp
+   0x0000000000401010 <+4>:	lea    0xc(%rsp),%rcx
+   0x0000000000401015 <+9>:	lea    0x8(%rsp),%rdx
+   0x000000000040101a <+14>:	mov    $0x4025cf,%esi
+   0x000000000040101f <+19>:	mov    $0x0,%eax
+   0x0000000000401024 <+24>:	callq  0x400bf0 <__isoc99_sscanf@plt>
+   0x0000000000401029 <+29>:	cmp    $0x2,%eax
+   0x000000000040102c <+32>:	jne    0x401035 <phase_4+41>
+   0x000000000040102e <+34>:	cmpl   $0xe,0x8(%rsp)
+   0x0000000000401033 <+39>:	jbe    0x40103a <phase_4+46>
+   0x0000000000401035 <+41>:	callq  0x40143a <explode_bomb>
+   0x000000000040103a <+46>:	mov    $0xe,%edx
+   0x000000000040103f <+51>:	mov    $0x0,%esi
+   0x0000000000401044 <+56>:	mov    0x8(%rsp),%edi
+   0x0000000000401048 <+60>:	callq  0x400fce <func4>
+   0x000000000040104d <+65>:	test   %eax,%eax
+   0x000000000040104f <+67>:	jne    0x401058 <phase_4+76>
+   0x0000000000401051 <+69>:	cmpl   $0x0,0xc(%rsp)
+   0x0000000000401056 <+74>:	je     0x40105d <phase_4+81>
+   0x0000000000401058 <+76>:	callq  0x40143a <explode_bomb>
+   0x000000000040105d <+81>:	add    $0x18,%rsp
+   0x0000000000401061 <+85>:	retq 
+```
 
 和前面一样，我们有<font color=red> `sscanf`</font>这个指令，利用<font color=red> `x/s 0x4025cf`</font>指令查看格式字符串，我们会发现，也是读入两个参数存放在栈中，然后传到<font color=red> `rcx`</font>和<font color=red> `rdx`</font>中。下面的汇编代码要求输入的参数是2个数字，并且第一个参数要小于<font color=red> `0xe`</font> 
 
@@ -113,10 +136,35 @@
 
 所以我们的目标是返回时`eax`的值为0.下面进入`func4`函数。
 
-![image-20190805114540784](https://github.com/shendezhuti/README_ADD_PIC/blob/master/CMU15213/bomlab/image-20190805114540784.png)
+```assembly
+0x0000000000400fce <+0>:	sub    $0x8,%rsp
+   0x0000000000400fd2 <+4>:	mov    %edx,%eax
+   0x0000000000400fd4 <+6>:	sub    %esi,%eax
+   0x0000000000400fd6 <+8>:	mov    %eax,%ecx
+   0x0000000000400fd8 <+10>:	shr    $0x1f,%ecx
+   0x0000000000400fdb <+13>:	add    %ecx,%eax
+   0x0000000000400fdd <+15>:	sar    %eax
+   0x0000000000400fdf <+17>:	lea    (%rax,%rsi,1),%ecx
+   0x0000000000400fe2 <+20>:	cmp    %edi,%ecx
+   0x0000000000400fe4 <+22>:	jle    0x400ff2 <func4+36>
+   0x0000000000400fe6 <+24>:	lea    -0x1(%rcx),%edx
+   0x0000000000400fe9 <+27>:	callq  0x400fce <func4>
+   0x0000000000400fee <+32>:	add    %eax,%eax
+   0x0000000000400ff0 <+34>:	jmp    0x401007 <func4+57>
+   0x0000000000400ff2 <+36>:	mov    $0x0,%eax
+   0x0000000000400ff7 <+41>:	cmp    %edi,%ecx
+   0x0000000000400ff9 <+43>:	jge    0x401007 <func4+57>
+   0x0000000000400ffb <+45>:	lea    0x1(%rcx),%esi
+   0x0000000000400ffe <+48>:	callq  0x400fce <func4>
+   0x0000000000401003 <+53>:	lea    0x1(%rax,%rax,1),%eax
+   0x0000000000401007 <+57>:	add    $0x8,%rsp
+   0x000000000040100b <+61>:	retq   
+
+```
 
 这段代码之中我们调用了`func4`，这是一个递归的过程，像之间那样直接分析比较困难，这里我们就将这个代码逆向为C语言再来分析，下面是逆向出的C语言代码：
 
+复制
 
 ```c
 int fun(int a1, int a2, int x){
@@ -137,6 +185,7 @@ int fun(int a1, int a2, int x){
 
 这里的`a1``a2`初始值分别为之前的`0xe`与`0x0`。我们可以直接写个测试程序来跑出能返回0的输入值：
 
+复制
 
 ```C
 int main(void){
@@ -154,7 +203,7 @@ int main(void){
 
 回到`phase_4`的代码：
 
-```
+```assembly
  0x0000000000401051 <+69>:	cmpl   $0x0,0xc(%rsp)
    0x0000000000401056 <+74>:	je     0x40105d <phase_4+81>
    0x0000000000401058 <+76>:	callq  0x40143a <explode_bomb>
@@ -165,8 +214,3 @@ int main(void){
 第1、2行将输入的第二个参数与0进行比较，如果不为0就引爆炸弹。所以输入的第二个参数必为0。
 
 综上我们得出（一个）答案为：`0 0 `
-
-
-
-
-
