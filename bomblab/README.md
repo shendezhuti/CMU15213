@@ -97,6 +97,76 @@
 
 而每个分支都将一个数复制到了`eax`中，也就是说我们只要根据不同的第一个参数的值读入对应的第二个参数就可以了，所以我们可以随意选择一个x值，这里我选择`x=1`，对应的第二个参数为`0x137`换成十进制是311，所以第3阶段的（一个）答案为：`1 311`
 
+-------
+
+### 四.phase_4
+
+到这一步的拆弹真的看的头大了，感觉自己的基础知识打的不是特别稳。
+
+![image-20190805113853994](https://github.com/shendezhuti/README_ADD_PIC/blob/master/CMU15213/bomlab/image-20190805113853994.png)
+
+和前面一样，我们有<font color=red> `sscanf`</font>这个指令，利用<font color=red> `x/s 0x4025cf`</font>指令查看格式字符串，我们会发现，也是读入两个参数存放在栈中，然后传到<font color=red> `rcx`</font>和<font color=red> `rdx`</font>中。下面的汇编代码要求输入的参数是2个数字，并且第一个参数要小于<font color=red> `0xe`</font> 
+
+接下来把0xe赋给`edx`、0x0赋给`esi`，`rsp+0x8`的值赋给`edi`。接下来调用了`func4`函数。
+
+在去查看`func4`函数的代码之前，我们先查看函数返回后的代码，了解我们需要的结果。第17、18行测试了`eax`的值如果不为0，就跳转到引爆代码。
+
+所以我们的目标是返回时`eax`的值为0.下面进入`func4`函数。
+
+![image-20190805114540784](https://github.com/shendezhuti/README_ADD_PIC/blob/master/CMU15213/bomlab/image-20190805114540784.png)
+
+这段代码之中我们调用了`func4`，这是一个递归的过程，像之间那样直接分析比较困难，这里我们就将这个代码逆向为C语言再来分析，下面是逆向出的C语言代码：
+
+
+```c
+int fun(int a1, int a2, int x){
+    int b = (a1 - a2) >> 31;
+    int result = ((a1-a2) + b) >> 1;
+    b = result + a2;
+    if(b == x) return 0;
+    if(b < x) {
+        result = fun(a1, b + 1, x);
+        return result * 2 + 1;
+    }else{
+        result = fun(b - 1, a2, x);
+        return result * 2;
+    }
+}
+
+```
+
+这里的`a1``a2`初始值分别为之前的`0xe`与`0x0`。我们可以直接写个测试程序来跑出能返回0的输入值：
+
+
+```C
+int main(void){
+    for(int i = 0; i <= 0xe; i++){
+        if(fun(0xe,0,i) == 0){
+            printf("%d\n",i) ;
+            return 0;
+        }
+    }
+    return 0; 
+}
+```
+
+得出允许的值有`0 1 3 7`.
+
+回到`phase_4`的代码：
+
+```
+ 0x0000000000401051 <+69>:	cmpl   $0x0,0xc(%rsp)
+   0x0000000000401056 <+74>:	je     0x40105d <phase_4+81>
+   0x0000000000401058 <+76>:	callq  0x40143a <explode_bomb>
+   0x000000000040105d <+81>:	add    $0x18,%rsp
+
+```
+
+第1、2行将输入的第二个参数与0进行比较，如果不为0就引爆炸弹。所以输入的第二个参数必为0。
+
+综上我们得出（一个）答案为：`0 0 `
+
+
 
 
 
