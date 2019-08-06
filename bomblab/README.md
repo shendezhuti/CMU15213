@@ -164,8 +164,6 @@
 
 这段代码之中我们调用了`func4`，这是一个递归的过程，像之间那样直接分析比较困难，这里我们就将这个代码逆向为C语言再来分析，下面是逆向出的C语言代码：
 
-复制
-
 ```c
 int func4(int target, int step, int limit) {
   /* edi = target; esi = step; edx = limit */
@@ -189,8 +187,6 @@ int func4(int target, int step, int limit) {
 ```
 
 这里的`a1``a2`初始值分别为之前的`0xe`与`0x0`。我们可以直接写个测试程序来跑出能返回0的输入值：
-
-复制
 
 ```C
 int main(void){
